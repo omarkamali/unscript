@@ -13,7 +13,7 @@ license = {text = "MIT"}
 Homepage = "https://github.com/omarkamali/unscript"
 Issues = "https://github.com/omarkamali/unscript/issues"
 
-[dependency-groups]
+[project.optional-dependencies]
 test = [
     "pytest>=7.0.0",
 ]
@@ -41,5 +41,4 @@ publish = "./scripts/publish.sh"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
-python_functions = ["test_*"]
-asyncio_mode = "auto" 
+python_functions = ["test_*"] 
