@@ -1,5 +1,7 @@
 # Unscript: Multilingual Text Cleaning
 
+[![Unscript Tests](https://github.com/omarkamali/unscript/actions/workflows/pytest.yml/badge.svg)](https://github.com/omarkamali/unscript/actions/workflows/pytest.yml)
+
 Unscript is a Python package designed for robust and flexible text cleaning, particularly for multilingual data. It provides functions to sanitize text by removing unwanted elements like mentions, hashtags, URLs, and emojis, and to filter text based on specific Unicode script ranges.
 
 ## Installation
