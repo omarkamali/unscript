@@ -1,5 +1,8 @@
 # Unscript: Multilingual Text Cleaning
 
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://badge.fury.io/py/unscript.svg)](https://badge.fury.io/py/unscript)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Unscript Tests](https://github.com/omarkamali/unscript/actions/workflows/pytest.yml/badge.svg)](https://github.com/omarkamali/unscript/actions/workflows/pytest.yml)
 
 Unscript is a Python package designed for robust and flexible text cleaning, particularly for multilingual data. It provides functions to sanitize text by removing unwanted elements like mentions, hashtags, URLs, and emojis, to filter text based on specific Unicode script ranges, and to detect and analyze the script composition of text.
@@ -596,6 +599,27 @@ print(validate_script_input(arabic_form_input, ranges.Arab))  # True
 mixed_input = "مرحبا hello world"  # Mixed Arabic and Latin
 print(validate_script_input(mixed_input, ranges.Arab))       # False
 ```
+
+## Performance
+
+Unscript is designed for high performance with multilingual text processing. All core functions are optimized for speed while maintaining accuracy.
+
+### Performance Monitoring
+
+We maintain detailed performance benchmarks for all functions across different scenarios:
+
+- **[View Performance Report](performance.md)** - Comprehensive benchmarks with timing data
+- **Quick Performance Check**: Run `python quick_benchmark.py` for development testing
+- **Full Benchmark Suite**: Run `python benchmark_performance.py` before releases
+
+Key performance highlights:
+- `clean_text`: ~1.4M characters/second for general text cleaning
+- `clean_script`: ~40K characters/second for script-specific filtering  
+- `unscript`: ~40K characters/second for complete text processing
+- `detect_script`: ~170K characters/second for script detection
+- `in_range`: ~1.4M calls/second for character range checking
+
+Performance varies by script complexity, text length, and configuration options. See [performance.md](performance.md) for detailed benchmarks across different scenarios and scripts. The benchmarks are run on a MacBook Pro with an M3 Max processor and the code can be found in [benchmark.py](benchmark.py).
 
 ## Contributing
 
