@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 Starting BorgLLM publish process..."
+echo "🚀 Starting Unscript publish process..."
 
 # 1. Check if git working directory is clean
 echo "🔍 Checking for uncommitted changes..."
@@ -61,7 +61,7 @@ then
 fi
 
 # Create the GitHub release
-gh release create "v$VERSION" --generate-notes --title "BorgLLM v$VERSION"
+gh release create "v$VERSION" --generate-notes --title "Unscript v$VERSION"
 
-echo "🎉 BorgLLM publish process completed successfully!"
+echo "🎉 Unscript publish process completed successfully!"
 echo "✨ GitHub Release v$VERSION created successfully!" 
