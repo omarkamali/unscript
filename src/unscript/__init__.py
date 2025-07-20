@@ -5,6 +5,8 @@ from .detect_script import (
     get_dominant_script,
     is_script_mixed,
 )
+from . import ranges
+from .ranges import in_range
 
 __all__ = [
     "clean_text",
@@ -14,4 +16,6 @@ __all__ = [
     "detect_script_detailed",
     "get_dominant_script",
     "is_script_mixed",
+    "ranges",
+    "in_range",
 ]

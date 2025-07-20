@@ -15,7 +15,7 @@ pip install unscript
 ## Quick Start
 
 ```python
-from unscript import unscript, clean_text, clean_script, detect_script
+from unscript import unscript, clean_text, clean_script, detect_script, ranges, in_range
 
 # Most common use case: complete text cleaning for a specific script
 text = "Hello @user! Check https://example.com 😊 مرحبا $123.45"
@@ -33,6 +33,14 @@ print(script_result)  # Output: "Hello @user Check https //example com 😊 $123
 # For detecting script composition
 detect_result = detect_script(text)
 print(detect_result)  # Output: {'Latn': 71.43, 'Arab': 28.57}
+
+# For checking individual characters against Unicode ranges
+print(in_range('ا', ranges.Arab))    # True - Arabic character
+print(in_range('A', ranges.Latn))    # True - Latin character
+print(in_range('5', ranges.numbers)) # True - Digit character
+
+# Check multiple ranges (OR logic)
+print(in_range('5', ranges.Arab, ranges.numbers))  # True - character is a number
 ```
 
 ## Functions
@@ -167,6 +175,127 @@ text_devanagari = "नमस्ते। यह है॥ 987"
 cleaned_devanagari = clean_script("Deva", text_devanagari, {"punctuation": True})
 print(cleaned_devanagari)
 # Expected output: "नमस्ते। यह है॥"
+```
+
+### Unicode Ranges and Character Checking
+
+### `ranges` Module
+
+The `ranges` module provides direct access to Unicode ranges for all supported scripts and character categories. This allows for fine-grained control over character detection and filtering.
+
+**Available Ranges:**
+- **Script ranges**: Access via `ranges.Arab`, `ranges.Latn`, `ranges.Hans`, etc.
+- **Category ranges**: Access via `ranges.numbers`, `ranges.punctuation`, `ranges.spaces`, `ranges.symbols`
+
+**Example Usage:**
+
+```python
+from unscript import ranges
+
+# Access script ranges
+arabic_ranges = ranges.Arab
+print(len(arabic_ranges))  # Number of Unicode ranges for Arabic script
+
+# Access category ranges  
+number_ranges = ranges.numbers
+punctuation_ranges = ranges.punctuation
+
+# Alternative access through organized objects
+latin_ranges = ranges.scripts.Latn
+symbol_ranges = ranges.categories.symbols
+
+# List all available ranges
+print(ranges.list_scripts())    # ['Arab', 'Armn', 'Beng', 'Brai', ...]
+print(ranges.list_categories()) # ['numbers', 'punctuation', 'spaces', 'symbols']
+
+# Get information about a range
+info = ranges.get_range_info('Arab')
+print(info['type'])         # 'script'
+print(info['range_count'])  # Number of Unicode ranges
+```
+
+### `in_range(character, *ranges) -> bool`
+
+Check if a character belongs to one or more Unicode ranges. This function supports both script ranges and category ranges, and can check multiple ranges simultaneously (OR logic).
+
+**Arguments:**
+- `character` (`str`): A single character to check
+- `*ranges`: One or more range lists (script or category ranges)
+
+**Returns:**
+- `bool`: True if the character is in any of the specified ranges, False otherwise
+
+**Example Usage:**
+
+```python
+from unscript import ranges, in_range
+
+# Check if character is in a single range
+print(in_range('ا', ranges.Arab))      # True - Arabic character
+print(in_range('A', ranges.Latn))      # True - Latin character  
+print(in_range('5', ranges.numbers))   # True - Digit character
+print(in_range('!', ranges.punctuation)) # True - Punctuation
+
+# Check multiple ranges (OR logic)
+print(in_range('5', ranges.Arab, ranges.numbers))  # True - in numbers
+print(in_range('ا', ranges.Arab, ranges.numbers))  # True - in Arabic
+print(in_range('A', ranges.Arab, ranges.numbers))  # False - in neither
+
+# Mix script and category ranges
+print(in_range('!', ranges.Latn, ranges.punctuation))  # True - punctuation
+print(in_range('A', ranges.Latn, ranges.punctuation))  # True - Latin
+print(in_range('你', ranges.Latn, ranges.punctuation)) # False - Chinese
+
+# Advanced filtering example
+text = "Hello مرحبا 123!"
+latin_or_arabic = [char for char in text if in_range(char, ranges.Latn, ranges.Arab)]
+print(''.join(latin_or_arabic))  # "Helloمرحبا"
+
+# Check if character is Arabic OR a digit
+is_arabic_or_digit = lambda c: in_range(c, ranges.Arab, ranges.numbers)
+print(is_arabic_or_digit('ا'))  # True
+print(is_arabic_or_digit('5'))  # True
+print(is_arabic_or_digit('A'))  # False
+```
+
+**Real-world Examples:**
+
+```python
+from unscript import ranges, in_range
+
+# Filter multilingual text by script
+def filter_by_scripts(text, *script_ranges):
+    """Keep only characters from specified scripts."""
+    return ''.join(char for char in text 
+                  if in_range(char, *script_ranges) or char.isspace())
+
+# Example usage
+mixed_text = "Hello مرحبا 你好 123!"
+latin_arabic = filter_by_scripts(mixed_text, ranges.Latn, ranges.Arab)
+print(latin_arabic)  # "Hello مرحبا   !"
+
+# Content validation
+def is_script_compliant(text, script_range, allow_numbers=True, allow_punctuation=True):
+    """Check if text only contains allowed character types."""
+    allowed_ranges = [script_range]
+    if allow_numbers:
+        allowed_ranges.append(ranges.numbers)
+    if allow_punctuation:
+        allowed_ranges.append(ranges.punctuation)
+    
+    for char in text:
+        if char.isspace():
+            continue
+        if not in_range(char, *allowed_ranges):
+            return False
+    return True
+
+# Example usage
+arabic_text = "مرحبا بالعالم 123!"
+print(is_script_compliant(arabic_text, ranges.Arab))  # True
+
+latin_text = "Hello World 你好!"  # Contains Chinese
+print(is_script_compliant(latin_text, ranges.Latn))   # False
 ```
 
 ### Script Detection Functions
@@ -410,6 +539,64 @@ print(f"Script distribution: {analysis['summary']}")
 print(f"Scripts found: {list(analysis['script_chars'].keys())}")
 ```
 
+### Custom Character Filtering with Ranges
+```python
+from unscript import ranges, in_range
+
+# Advanced content filtering
+def filter_content(text, allowed_scripts=None, allow_digits=True, allow_punctuation=True):
+    """Filter text to only include specific character types."""
+    if allowed_scripts is None:
+        allowed_scripts = [ranges.Latn]  # Default to Latin
+    
+    extra_ranges = []
+    if allow_digits:
+        extra_ranges.append(ranges.numbers)
+    if allow_punctuation:
+        extra_ranges.append(ranges.punctuation)
+    
+    filtered_chars = []
+    for char in text:
+        if char.isspace():  # Always allow spaces
+            filtered_chars.append(char)
+        elif in_range(char, *(allowed_scripts + extra_ranges)):
+            filtered_chars.append(char)
+        else:
+            filtered_chars.append(' ')  # Replace unwanted chars with space
+    
+    return ''.join(filtered_chars).strip()
+
+# Example usage
+multilingual_text = "Hello مرحبا 你好 123! Welcome to unscript."
+
+# Keep only Latin + numbers + punctuation
+latin_only = filter_content(multilingual_text, [ranges.Latn])
+print(latin_only)  # "Hello     123! Welcome to unscript."
+
+# Keep Arabic + Latin + numbers
+arabic_latin = filter_content(multilingual_text, [ranges.Arab, ranges.Latn])
+print(arabic_latin)  # "Hello مرحبا   123! Welcome to unscript."
+
+# Input validation for forms
+def validate_script_input(text, script_range, max_other_script_ratio=0.1):
+    """Validate that text is primarily in the expected script."""
+    script_chars = sum(1 for char in text if in_range(char, script_range))
+    total_chars = len([char for char in text if not char.isspace()])
+    
+    if total_chars == 0:
+        return True
+    
+    script_ratio = script_chars / total_chars
+    return script_ratio >= (1 - max_other_script_ratio)
+
+# Examples
+arabic_form_input = "مرحبا بك في موقعنا"
+print(validate_script_input(arabic_form_input, ranges.Arab))  # True
+
+mixed_input = "مرحبا hello world"  # Mixed Arabic and Latin
+print(validate_script_input(mixed_input, ranges.Arab))       # False
+```
+
 ## Contributing
 
 We welcome contributions to Unscript! If you'd like to contribute, please follow these steps:
@@ -431,7 +618,20 @@ Unscript is released under the MIT License. See the [LICENSE](LICENSE) file for 
 
 [Omar Kamali](https://github.com/omarkamali)
 
+## Acknowledgments
 
+This project is supported by [Omneity Labs](https://omneitylabs.com), a research lab focused on building NLP and generative AI models for low-resource languages and techniques for cultural alignment.
 
+## Citation
 
+If you use Unscript in your research, please cite it as follows:
 
+```bibtex
+@software{unscript2025,
+  title={Unscript: Multilingual Text Cleaning},
+  author={Omar Kamali},
+  year={2025},
+  url={https://github.com/omarkamali/unscript}
+  note={Project developed under Omneity Labs}
+}
+```
