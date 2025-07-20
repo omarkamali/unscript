@@ -2,7 +2,7 @@
 
 [![Unscript Tests](https://github.com/omarkamali/unscript/actions/workflows/pytest.yml/badge.svg)](https://github.com/omarkamali/unscript/actions/workflows/pytest.yml)
 
-Unscript is a Python package designed for robust and flexible text cleaning, particularly for multilingual data. It provides functions to sanitize text by removing unwanted elements like mentions, hashtags, URLs, and emojis, and to filter text based on specific Unicode script ranges.
+Unscript is a Python package designed for robust and flexible text cleaning, particularly for multilingual data. It provides functions to sanitize text by removing unwanted elements like mentions, hashtags, URLs, and emojis, to filter text based on specific Unicode script ranges, and to detect and analyze the script composition of text.
 
 ## Installation
 
@@ -15,7 +15,7 @@ pip install unscript
 ## Quick Start
 
 ```python
-from unscript import unscript, clean_text, clean_script
+from unscript import unscript, clean_text, clean_script, detect_script
 
 # Most common use case: complete text cleaning for a specific script
 text = "Hello @user! Check https://example.com 😊 مرحبا $123.45"
@@ -29,9 +29,15 @@ print(clean_result)  # Output: "hello ! check مرحبا $123.45"
 # For script filtering only (keeps original case, URLs, mentions)
 script_result = clean_script("Latn", text, {"numbers": True, "symbols": True})
 print(script_result)  # Output: "Hello @user Check https //example com 😊 $123.45"
+
+# For detecting script composition
+detect_result = detect_script(text)
+print(detect_result)  # Output: {'Latn': 71.43, 'Arab': 28.57}
 ```
 
 ## Functions
+
+### Text Cleaning Functions
 
 ### `unscript(script: str, text: str, config: dict = None, lowercase: bool = True) -> str`
 
@@ -49,7 +55,7 @@ This is the **primary function** that combines script filtering with general tex
 **Example Usage:**
 
 ```python
-from unscript.unscript import unscript
+from unscript import unscript
 
 # Basic usage with Latin script
 text1 = "Hello @user! Check https://example.com 😊 مرحبا"
@@ -96,7 +102,7 @@ This function provides a general-purpose text cleaning utility. It's designed to
 **Example Usage:**
 
 ```python
-from unscript.unscript import clean_text
+from unscript import clean_text
 
 text1 = "Hello world! This is a test @user #python https://example.com 😊 coooooolllll"
 cleaned_text1 = clean_text(text1)
@@ -136,7 +142,7 @@ This function filters text to include only characters belonging to a specified U
 **Example Usage:**
 
 ```python
-from unscript.unscript import clean_script
+from unscript import clean_script
 
 # Example 1: Latin script, no numbers or punctuation
 text_latin = "Hello World! 123 مرحبا"
@@ -163,9 +169,160 @@ print(cleaned_devanagari)
 # Expected output: "नमस्ते। यह है॥"
 ```
 
+### Script Detection Functions
+
+### `detect_script(text: str, include_categories: bool = False, min_threshold: float = 0.01) -> dict`
+
+Analyzes text and returns the percentage distribution of different Unicode scripts found. By default, it only considers script characters (ignoring spaces, punctuation, numbers, and symbols) to provide clean script percentages.
+
+**Arguments:**
+-   `text` (`str`): The text to analyze.
+-   `include_categories` (`bool`, optional): Whether to include shared categories (spaces, numbers, punctuation, symbols) in the analysis. Defaults to `False`.
+-   `min_threshold` (`float`, optional): Minimum percentage threshold to include in results. Scripts below this threshold are excluded. Defaults to `0.01` (1%).
+
+**Returns:**
+-   `dict`: Dictionary mapping script codes to their percentages. When `include_categories=True`, also includes categories like 'spaces', 'numbers', etc.
+
+**Example Usage:**
+
+```python
+from unscript import detect_script
+
+# Basic usage - only script percentages
+text1 = "Hello World!"
+result1 = detect_script(text1)
+print(result1)
+# Expected output: {'Latn': 100.0}
+
+# Mixed scripts
+text2 = "Hello مرحبا 你好"
+result2 = detect_script(text2)
+print(result2)
+# Expected output: {'Latn': 41.67, 'Arab': 41.67, 'Hans': 16.67}
+
+# Including categories for detailed analysis
+text3 = "Hello مرحبا 123!"
+result3 = detect_script(text3, include_categories=True)
+print(result3)
+# Expected output: {'Latn': 41.67, 'Arab': 25.0, 'spaces': 16.67, 'punctuation': 8.33, 'numbers': 8.33}
+
+# With minimum threshold to filter out minor scripts
+text4 = "Hello World! مرحبا"
+result4 = detect_script(text4, min_threshold=10.0)
+print(result4)
+# Expected output: {'Latn': 77.78, 'Arab': 22.22}
+```
+
+### `detect_script_detailed(text: str, normalize_whitespace: bool = False) -> dict`
+
+Provides detailed script detection analysis including character-by-character breakdown and character collections.
+
+**Arguments:**
+-   `text` (`str`): The text to analyze.
+-   `normalize_whitespace` (`bool`, optional): Whether to treat all whitespace as generic spaces for analysis purposes. Defaults to `False`.
+
+**Returns:**
+-   `dict`: Dictionary with detailed analysis including:
+    -   `'summary'`: Same as `detect_script()` output with categories included
+    -   `'total_chars'`: Total number of characters analyzed
+    -   `'breakdown'`: List of dicts with character, script/category, and position info
+    -   `'script_chars'`: Dict mapping scripts to character lists
+    -   `'category_chars'`: Dict mapping categories to character lists
+
+**Example Usage:**
+
+```python
+from unscript import detect_script_detailed
+
+text = "Hi! 你好"
+result = detect_script_detailed(text)
+
+print(result['summary'])
+# Expected output: {'Latn': 40.0, 'Hans': 40.0, 'punctuation': 20.0}
+
+print(result['total_chars'])
+# Expected output: 5
+
+print(result['script_chars'])
+# Expected output: {'Latn': ['H', 'i'], 'Hans': ['你', '好']}
+
+print(result['category_chars'])
+# Expected output: {'punctuation': ['!']}
+```
+
+### `get_dominant_script(text: str, min_percentage: float = 30.0) -> str | None`
+
+Determines the dominant script in the text, if any single script meets the minimum percentage threshold.
+
+**Arguments:**
+-   `text` (`str`): The text to analyze.
+-   `min_percentage` (`float`, optional): Minimum percentage required to be considered dominant. Defaults to `30.0`.
+
+**Returns:**
+-   `str | None`: The dominant script code if found, `None` otherwise.
+
+**Example Usage:**
+
+```python
+from unscript import get_dominant_script
+
+# Clear majority
+text1 = "Hello world! This is a long English sentence."
+result1 = get_dominant_script(text1)
+print(result1)
+# Expected output: "Latn"
+
+# Mixed text with no clear dominant script
+text2 = "Hello مرحبا 你好"
+result2 = get_dominant_script(text2)
+print(result2)
+# Expected output: None
+
+# Custom threshold
+text3 = "Hello مرحبا"
+result3 = get_dominant_script(text3, min_percentage=20.0)
+print(result3)
+# Expected output: "Latn" (since Latin has >20%)
+```
+
+### `is_script_mixed(text: str, threshold: float = 10.0) -> bool`
+
+Determines if text contains a significant mix of different scripts based on a threshold.
+
+**Arguments:**
+-   `text` (`str`): The text to analyze.
+-   `threshold` (`float`, optional): Minimum percentage for a script to be considered significant. Defaults to `10.0`.
+
+**Returns:**
+-   `bool`: `True` if text contains multiple scripts above the threshold, `False` otherwise.
+
+**Example Usage:**
+
+```python
+from unscript import is_script_mixed
+
+# Mixed scripts
+text1 = "Hello مرحبا"
+result1 = is_script_mixed(text1)
+print(result1)
+# Expected output: True
+
+# Single script
+text2 = "Hello world!"
+result2 = is_script_mixed(text2)
+print(result2)
+# Expected output: False
+
+# Custom threshold
+text3 = "Hello World مرحبا"  # ~75% Latin, ~25% Arabic
+result3 = is_script_mixed(text3, threshold=30.0)
+print(result3)
+# Expected output: False (Arabic doesn't meet 30% threshold)
+```
+
 ## Supported Scripts
 
-`unscript` and `clean_script` functions support a wide range of Unicode scripts. Below is a table of the supported script codes and their common names:
+`unscript`, `clean_script`, and `detect_script` functions support a wide range of Unicode scripts. Below is a table of the supported script codes and their common names:
 
 | Script Code | Common Name                |
 |-------------|----------------------------|
@@ -209,6 +366,49 @@ print(cleaned_devanagari)
 | `Syrc`      | Syriac                     |
 | `Tale`      | Tai Le                     |
 | `Yiii`      | Yi                         |
+
+## Use Cases
+
+### Text Preprocessing for NLP
+```python
+from unscript import unscript, detect_script
+
+# Clean text for specific language models
+arabic_text = unscript("Arab", "مرحبا @user! تحقق من https://example.com 😊")
+print(arabic_text)  # "مرحبا تحقق من"
+
+# Detect script composition for language routing
+mixed_text = "Hello مرحبا 你好"
+scripts = detect_script(mixed_text)
+if scripts.get("Arab", 0) > 30:
+    # Route to Arabic NLP pipeline
+    process_arabic(mixed_text)
+```
+
+### Content Filtering and Validation
+```python
+from unscript import is_script_mixed, get_dominant_script
+
+# Validate content language
+user_input = "User's multilingual text"
+if is_script_mixed(user_input):
+    print("Please use a single language")
+else:
+    dominant = get_dominant_script(user_input)
+    print(f"Detected language script: {dominant}")
+```
+
+### Data Analysis and Statistics
+```python
+from unscript import detect_script_detailed
+
+# Analyze document composition
+document = "Large multilingual document..."
+analysis = detect_script_detailed(document)
+print(f"Total characters: {analysis['total_chars']}")
+print(f"Script distribution: {analysis['summary']}")
+print(f"Scripts found: {list(analysis['script_chars'].keys())}")
+```
 
 ## Contributing
 
