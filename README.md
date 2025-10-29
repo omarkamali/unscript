@@ -655,7 +655,9 @@ If you use Unscript in your research, please cite it as follows:
   title={Unscript: Multilingual Text Cleaning},
   author={Omar Kamali},
   year={2025},
-  url={https://github.com/omarkamali/unscript}
+  version={0.1.0},
+  doi={10.5281/zenodo.17479243},
+  url={https://github.com/omarkamali/unscript},
   note={Project developed under Omneity Labs}
 }
 ```
