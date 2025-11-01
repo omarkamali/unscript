@@ -1,6 +1,6 @@
 [project]
 name = "unscript"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     {name = "Omar Kamali", email = "unscript@omarkama.li"},
 ]
@@ -35,7 +35,7 @@ include = [
 [tool.hatch.envs.default]
 
 [tool.hatch.envs.default.scripts]
-publish = "./scripts/publish.sh"
+publish = "python ./scripts/publish.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

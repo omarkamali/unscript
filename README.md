@@ -619,7 +619,7 @@ Key performance highlights:
 - `detect_script`: ~170K characters/second for script detection
 - `in_range`: ~1.4M calls/second for character range checking
 
-Performance varies by script complexity, text length, and configuration options. See [performance.md](performance.md) for detailed benchmarks across different scenarios and scripts. The benchmarks are run on a MacBook Pro with an M3 Max processor and the code can be found in [benchmark.py](benchmark.py).
+Performance varies by script complexity, text length, and configuration options. See [performance.md](performance.md) for detailed benchmarks across different scenarios and scripts. The benchmarks are run on a MacBook Pro with an M3 Max processor and the code can be found in [benchmark/full.py](benchmark/full.py) and [benchmark/quick.py](benchmark/quick.py).
 
 ## Contributing
 
@@ -655,7 +655,7 @@ If you use Unscript in your research, please cite it as follows:
   title={Unscript: Multilingual Text Cleaning},
   author={Omar Kamali},
   year={2025},
-  version={0.1.0},
+  version={0.1.1},
   doi={10.5281/zenodo.17479243},
   url={https://github.com/omarkamali/unscript},
   note={Project developed under Omneity Labs}

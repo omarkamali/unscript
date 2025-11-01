@@ -3,158 +3,131 @@ import unicodedata
 import re
 
 # Import script ranges from the shared module
-from .script_ranges import SCRIPT_CORE_RANGES, SHARED_RANGES
+from unscript.script_ranges import SCRIPT_CORE_RANGES, SHARED_RANGES
 
+DEFAULT_CONFIG = {
+    "spaces": True,
+    "numbers": False,
+    "punctuation": False,
+    "symbols": False,
+}
 
-def create_clean_script_function(default_config=None):
+def clean_script(script, text, config=None):
     """
-    Factory function that creates a clean_script function with precalculated ranges based on config.
+    Remove any characters that don't belong to the specified script.
 
     Args:
-        default_config (dict): Default configuration for character types to include
-                             {
-                                 'spaces': bool,
-                                 'numbers': bool,
-                                 'punctuation': bool,
-                                 'symbols': bool
-                             }
+        script (str): The script code (e.g., 'Latn', 'Arab')
+        text (str): The text to clean
+        config (dict): Configuration overriding DEFAULT_CONFIG
+
+    Returns:
+        str: Text with only characters from the specified script
     """
-    if default_config is None:
-        default_config = {
-            "spaces": True,
-            "numbers": False,
-            "punctuation": False,
-            "symbols": False,
-        }
+    if not text:
+        return text
 
-    def clean_script(script, text, config=None):
-        """
-        Remove any characters that don't belong to the specified script.
+    # If script is not in our dictionary, return the original text
+    if script not in SCRIPT_CORE_RANGES:
+        return text
 
-        Args:
-            script (str): The script code (e.g., 'Latn', 'Arab')
-            text (str): The text to clean
-            config (dict): Configuration to override default_config
+    # Merge configs
+    current_config = DEFAULT_CONFIG.copy()
+    if config:
+        current_config.update(config)
 
-        Returns:
-            str: Text with only characters from the specified script
-        """
-        if not text:
-            return text
+    # If numbers are enabled, protect decimal numbers first
+    if current_config.get("numbers", False):
+        # Pattern to match decimal numbers (including various decimal separators)
+        # This matches patterns like: 123.45, 123,45, 1.234.567, 1,234,567, etc.
+        decimal_pattern = r"\b\d+[.,]\d+(?:[.,]\d+)*\b"
+        decimal_numbers = re.findall(decimal_pattern, text)
 
-        # If script is not in our dictionary, return the original text
-        if script not in SCRIPT_CORE_RANGES:
-            return text
+        # Replace decimal numbers with placeholders
+        placeholders = {}
+        protected_text = text
+        for i, number in enumerate(decimal_numbers):
+            placeholder = f"__DECIMAL_{i}__"
+            placeholders[placeholder] = number
+            protected_text = protected_text.replace(number, placeholder, 1)
+    else:
+        protected_text = text
+        placeholders = {}
 
-        # Merge configs
-        current_config = default_config.copy()
-        if config:
-            current_config.update(config)
+    # Build ranges to use (non-cached)
+    ranges_to_use = list(SCRIPT_CORE_RANGES[script])
+    # Add spaces based on config
+    if current_config.get("spaces", True):
+        ranges_to_use.extend(SHARED_RANGES["spaces"])
+    # Add other shared ranges based on config
+    for category, include in current_config.items():
+        if include and category in SHARED_RANGES and category != "spaces":
+            ranges_to_use.extend(SHARED_RANGES[category])
 
-        # If numbers are enabled, protect decimal numbers first
-        if current_config.get("numbers", False):
-            # Pattern to match decimal numbers (including various decimal separators)
-            # This matches patterns like: 123.45, 123,45, 1.234.567, 1,234,567, etc.
-            decimal_pattern = r"\b\d+[.,]\d+(?:[.,]\d+)*\b"
-            decimal_numbers = re.findall(decimal_pattern, text)
+    # Process each character: keep included characters, replace excluded punctuation with spaces
+    result = []
+    i = 0
+    while i < len(protected_text):
+        # Check if we're at a placeholder
+        if protected_text[i:].startswith("__DECIMAL_"):
+            # Find the end of the placeholder
+            end_pos = protected_text.find("__", i + 2) + 2
+            placeholder = protected_text[i:end_pos]
+            if placeholder in placeholders:
+                result.append(placeholders[placeholder])
+                i = end_pos
+                continue
 
-            # Replace decimal numbers with placeholders
-            placeholders = {}
-            protected_text = text
-            for i, number in enumerate(decimal_numbers):
-                placeholder = f"__DECIMAL_{i}__"
-                placeholders[placeholder] = number
-                protected_text = protected_text.replace(number, placeholder, 1)
-        else:
-            protected_text = text
-            placeholders = {}
+        char = protected_text[i]
+        code_point = ord(char)
+        in_included_range = False
 
-        # Build ranges to use
-        ranges_to_use = list(SCRIPT_CORE_RANGES[script])
+        # Check if character is in included ranges
+        for start, end in ranges_to_use:
+            if start <= code_point <= end:
+                in_included_range = True
+                break
 
-        # Add spaces based on config
-        if current_config.get("spaces", True):
-            ranges_to_use.extend(SHARED_RANGES["spaces"])
+        # Even if character is in included ranges, check if it should be excluded
+        # due to configuration (e.g., numbers=False should exclude digits even if in script range)
+        should_exclude = False
+        if in_included_range:
+            # Check if this character is in excluded categories
+            # Use priority: punctuation > numbers > symbols (most specific first)
+            category_priority = ["punctuation", "numbers", "symbols"]
 
-        # Add other shared ranges based on config
-        for category, include in current_config.items():
-            if include and category in SHARED_RANGES and category != "spaces":
-                ranges_to_use.extend(SHARED_RANGES[category])
-
-        # Build ranges to exclude
-        ranges_to_exclude = []
-        for category, include in current_config.items():
-            if not include and category in SHARED_RANGES:
-                ranges_to_exclude.extend(SHARED_RANGES[category])
-
-        # Process each character: keep included characters, replace excluded punctuation with spaces
-        result = []
-        i = 0
-        while i < len(protected_text):
-            # Check if we're at a placeholder
-            if protected_text[i:].startswith("__DECIMAL_"):
-                # Find the end of the placeholder
-                end_pos = protected_text.find("__", i + 2) + 2
-                placeholder = protected_text[i:end_pos]
-                if placeholder in placeholders:
-                    result.append(placeholders[placeholder])
-                    i = end_pos
-                    continue
-
-            char = protected_text[i]
-            code_point = ord(char)
-            in_included_range = False
-
-            # Check if character is in included ranges
-            for start, end in ranges_to_use:
-                if start <= code_point <= end:
-                    in_included_range = True
-                    break
-
-            # Even if character is in included ranges, check if it should be excluded
-            # due to configuration (e.g., numbers=False should exclude digits even if in script range)
-            should_exclude = False
-            if in_included_range:
-                # Check if this character is in excluded categories
-                # Use priority: punctuation > numbers > symbols (most specific first)
-                category_priority = ["punctuation", "numbers", "symbols"]
-
-                for category in category_priority:
-                    if category in current_config:
-                        include = current_config[category]
-                        if category in SHARED_RANGES:
-                            for start, end in SHARED_RANGES[category]:
-                                if start <= code_point <= end:
-                                    # Character found in this category
-                                    if not include:
-                                        should_exclude = True
-                                    # Stop checking other categories (found the primary category)
-                                    break
-                            if (
-                                start <= code_point <= end
-                            ):  # If we found it in this category
+            for category in category_priority:
+                if category in current_config:
+                    include = current_config[category]
+                    if category in SHARED_RANGES:
+                        for start, end in SHARED_RANGES[category]:
+                            if start <= code_point <= end:
+                                # Character found in this category
+                                if not include:
+                                    should_exclude = True
+                                # Stop checking other categories (found the primary category)
                                 break
+                        if (
+                            start <= code_point <= end
+                        ):  # If we found it in this category
+                            break
 
-            if in_included_range and not should_exclude:
-                result.append(char)
-            else:
-                # Character is not in included ranges or should be excluded
-                # Replace any non-letter character with space to prevent word merging
-                # Only skip replacement if character is a space (already handled by spaces config)
-                if not char.isspace():
-                    result.append(
-                        " "
-                    )  # Replace non-letter with space to prevent word merging
-                # If it's a space, just remove it (don't append anything) since spaces are handled by config
+        if in_included_range and not should_exclude:
+            result.append(char)
+        else:
+            # Character is not in included ranges or should be excluded
+            # Replace any non-letter character with space to prevent word merging
+            # Only skip replacement if character is a space (already handled by spaces config)
+            if not char.isspace():
+                result.append(
+                    " "
+                )  # Replace non-letter with space to prevent word merging
+            # If it's a space, just remove it (don't append anything) since spaces are handled by config
 
-            i += 1
+        i += 1
 
-        # Collapse multiple spaces into one
-        return re.sub(r"\s+", " ", "".join(result)).strip()
-
-    return clean_script
-
-import re
+    # Collapse multiple spaces into one
+    return re.sub(r"\s+", " ", "".join(result)).strip()
 
 
 def remove_emoji(text):
