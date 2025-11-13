@@ -458,45 +458,46 @@ print(result3)
 
 | Script Code | Common Name                |
 |-------------|----------------------------|
-| `Latn`      | Latin                      |
 | `Arab`      | Arabic                     |
-| `Hebr`      | Hebrew                     |
-| `Thai`      | Thai                       |
-| `Khmr`      | Khmer                      |
-| `Hang`      | Hangul (Korean)            |
-| `Hans`      | Han (Simplified Chinese)   |
-| `Jpan`      | Japanese (Hiragana & Katakana, Han) |
-| `Cyrl`      | Cyrillic                   |
-| `Geor`      | Georgian                   |
-| `Deva`      | Devanagari                 |
-| `Beng`      | Bengali                    |
-| `Gujr`      | Gujarati                   |
-| `Guru`      | Gurmukhi                   |
-| `Ethi`      | Ethiopic                   |
-| `Grek`      | Greek                      |
-| `Taml`      | Tamil                      |
-| `Mlym`      | Malayalam                  |
-| `Telu`      | Telugu                     |
-| `Knda`      | Kannada                    |
-| `Orya`      | Oriya                      |
-| `Sinh`      | Sinhala                    |
-| `Mymr`      | Myanmar                    |
-| `Laoo`      | Lao                        |
-| `Tibt`      | Tibetan                    |
 | `Armn`      | Armenian                   |
-| `Thaa`      | Thaana                     |
-| `Mong`      | Mongolian                  |
-| `Viet`      | Vietnamese (Latin Extended) |
+| `Beng`      | Bengali                    |
 | `Brai`      | Braille                    |
-| `Tfng`      | Tifinagh                   |
-| `Hant`      | Han (Traditional Chinese)  |
 | `Cans`      | Canadian Aboriginal Syllabics |
 | `Cher`      | Cherokee                   |
+| `Cyrl`      | Cyrillic                   |
+| `Deva`      | Devanagari                 |
+| `Ethi`      | Ethiopic                   |
+| `Geor`      | Georgian                   |
 | `Goth`      | Gothic                     |
-| `Olck`      | Ol Chiki                   |
+| `Grek`      | Greek                      |
+| `Gujr`      | Gujarati                   |
+| `Guru`      | Gurmukhi                   |
+| `Hang`      | Hangul (Korean)            |
+| `Hans`      | Han (Simplified Chinese)   |
+| `Hant`      | Han (Traditional Chinese)  |
+| `Hebr`      | Hebrew                     |
+| `Jpan`      | Japanese (Hiragana & Katakana, Han) |
+| `Khmr`      | Khmer                      |
+| `Knda`      | Kannada                    |
+| `Laoo`      | Lao                        |
+| `Latn`      | Latin                      |
+| `Mlym`      | Malayalam                  |
+| `Mong`      | Mongolian                  |
 | `Mtei`      | Meetei Mayek               |
+| `Mymr`      | Myanmar                    |
+| `Olck`      | Ol Chiki                   |
+| `Orya`      | Oriya                      |
+| `Sinh`      | Sinhala                    |
+| `Sylo`      | Syloti Nagri               |
 | `Syrc`      | Syriac                     |
 | `Tale`      | Tai Le                     |
+| `Taml`      | Tamil                      |
+| `Telu`      | Telugu                     |
+| `Tfng`      | Tifinagh                   |
+| `Thaa`      | Thaana                     |
+| `Thai`      | Thai                       |
+| `Tibt`      | Tibetan                    |
+| `Viet`      | Vietnamese (Latin Extended) |
 | `Yiii`      | Yi                         |
 
 ## Use Cases
