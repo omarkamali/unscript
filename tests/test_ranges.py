@@ -74,6 +74,7 @@ class TestRangeAccess:
         assert "Arab" in script_names
         assert "Latn" in script_names
         assert "Hans" in script_names
+        assert "Sylo" in script_names
 
     def test_categories_accessor(self):
         """Test the categories accessor object."""
@@ -108,6 +109,14 @@ class TestInRangeFunction:
         assert in_range("A", ranges.Arab) == False
         assert in_range("5", ranges.Arab) == False
         assert in_range("!", ranges.Arab) == False
+
+    def test_syloti_nagri_characters(self):
+        """Test Syloti Nagri character detection (Sylo)."""
+        # Syloti Nagri characters (e.g., U+A80A, U+A803)
+        assert in_range("ꠊ", ranges.Sylo) == True  # U+A80A
+        assert in_range("ꠃ", ranges.Sylo) == True  # U+A803
+        # Non-Sylo characters
+        assert in_range("A", ranges.Sylo) == False
 
     def test_latin_characters(self):
         """Test Latin character detection."""

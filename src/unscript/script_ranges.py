@@ -188,6 +188,9 @@ SCRIPT_CORE_RANGES = {
         (0x0700, 0x074F),  # Syriac
         (0x0860, 0x086F),  # Syriac Supplement
     ],
+    "Sylo": [
+        (0xA800, 0xA82F),  # Syloti Nagri
+    ],
     "Tale": [
         (0x1950, 0x197F),  # Tai Le
     ],
@@ -196,6 +199,69 @@ SCRIPT_CORE_RANGES = {
         (0xA490, 0xA4CF),  # Yi Radicals
     ],
 }
+
+
+# Define punctuation subsets for level-based inclusion
+
+# ASCII punctuation (basic): keep sentence/word punctuation and quotes, excluding brackets and special symbols
+PUNCTUATION_ASCII = [
+    (0x0021, 0x0021),  # !
+    (0x0022, 0x0022),  # "
+    (0x0027, 0x0027),  # '
+    (0x002C, 0x002C),  # ,
+    (0x002E, 0x002E),  # .
+    (0x003A, 0x003B),  # : ;
+    (0x003F, 0x003F),  # ?
+]
+
+# EXTENDED: ASCII + curly quotes + guillemets + script-specific marks + fullwidth punctuation + all brackets (ASCII + fullwidth)
+PUNCTUATION_EXTENDED = (
+    PUNCTUATION_ASCII
+    + [
+        (0x2018, 0x201F),  # curly quotes
+        (0x2039, 0x203A),  # single guillemets
+        (0x00AB, 0x00AB),  # «
+        (0x00BB, 0x00BB),  # »
+        (0x060C, 0x060C),  # Arabic comma
+        (0x061B, 0x061B),  # Arabic semicolon
+        (0x061F, 0x061F),  # Arabic question mark
+        (0x06D4, 0x06D4),  # Arabic full stop
+        (0x0964, 0x0965),  # Devanagari danda
+        (0x0F0D, 0x0F0D),  # Tibetan shad
+        (0x104B, 0x104B),  # Myanmar little section
+        (0x17D4, 0x17D4),  # Khmer sign khan
+        (0x3002, 0x3002),  # CJK ideographic full stop
+        (0xFF01, 0xFF01),  # Fullwidth !
+        (0xFF0C, 0xFF0C),  # Fullwidth ,
+        (0xFF0E, 0xFF0E),  # Fullwidth .
+        (0xFF1A, 0xFF1B),  # Fullwidth : ;
+        (0xFF1F, 0xFF1F),  # Fullwidth ?
+        # Brackets ASCII + fullwidth
+        (0x0028, 0x0029),  # ()
+        (0x005B, 0x005D),  # []
+        (0x007B, 0x007D),  # {}
+        (0x003C, 0x003C),  # <
+        (0x003E, 0x003E),  # >
+        (0xFF08, 0xFF09),  # Fullwidth ()
+        (0xFF3B, 0xFF3D),  # Fullwidth []
+        (0xFF5B, 0xFF5D),  # Fullwidth {}
+        (0xFF1C, 0xFF1E),  # Fullwidth < = >
+    ]
+)
+
+# ALL: EXTENDED + remaining general punctuation (excluding whitespace/bidi controls already treated under spaces)
+PUNCTUATION_ALL = (
+    PUNCTUATION_EXTENDED
+    + [
+        (0x2000, 0x2025),  # General Punctuation (excluding ellipsis)
+        (0x2027, 0x206F),  # General Punctuation (excluding ellipsis)
+        (0xFE10, 0xFE1F),  # Vertical Forms
+        (0xFE30, 0xFE4F),  # CJK Compatibility Forms
+        (0xFE50, 0xFE52),  # Small comma, period, semicolon
+        (0xFE54, 0xFE57),  # Small colon, question mark, exclamation mark
+        (0xFE58, 0xFE6F),  # Small form variants (more punctuation-like)
+    ]
+)
 
 # Shared ranges that can be optionally included
 SHARED_RANGES = {
@@ -254,12 +320,21 @@ SHARED_RANGES = {
     ],
     "punctuation": [
         (0x0021, 0x0021),  # ! (exclamation mark)
+        (0x0022, 0x0022),  # " (quotation mark)
         (0x002C, 0x002C),  # , (comma)
         (0x002E, 0x002E),  # . (period)
         (0x003A, 0x003B),  # : and ; (colon and semicolon)
         (0x003F, 0x003F),  # ? (question mark)
+        (0x0027, 0x0027),  # ' (apostrophe)
+        (0x0028, 0x0029),  # ( ) (round brackets)
+        (0x005B, 0x005D),  # [ ] (square brackets)
+        (0x007B, 0x007D),  # { } (curly brackets)
+        (0x003C, 0x003C),  # < (angle bracket)
+        (0x003E, 0x003E),  # > (angle bracket)
         (0x00A1, 0x00A1),  # ¡ (inverted exclamation mark)
         (0x00BF, 0x00BF),  # ¿ (inverted question mark)
+        (0x00AB, 0x00AB),  # « (left-pointing double angle quotation mark)
+        (0x00BB, 0x00BB),  # » (right-pointing double angle quotation mark)
         (0x060C, 0x060C),  # ، (Arabic comma)
         (0x061B, 0x061B),  # ؛ (Arabic semicolon)
         (0x061F, 0x061F),  # ؟ (Arabic question mark)
@@ -270,6 +345,12 @@ SHARED_RANGES = {
         (0x17D4, 0x17D4),  # ។ (Khmer sign khan)
         (0x3002, 0x3002),  # 。 (CJK ideographic full stop)
         (0x2026, 0x2026),  # … (ellipsis)
+        (0x2018, 0x201F),  # ‘ ’ ‚ ‛ “ ” „ ‟ (curly single/double quotes)
+        (0x2039, 0x203A),  # ‹ › (single guillemets)
+        (0x2000, 0x2025),  # General Punctuation (excluding ellipsis)
+        (0x2027, 0x206F),  # General Punctuation (excluding ellipsis)
+        (0xFE10, 0xFE1F),  # Vertical Forms
+        (0xFE30, 0xFE4F),  # CJK Compatibility Forms (punctuation-related)
         (0xFE50, 0xFE52),  # Small comma, period, semicolon
         (0xFE54, 0xFE57),  # Small colon, question mark, exclamation mark
         (0xFF01, 0xFF01),  # Fullwidth exclamation mark
@@ -277,9 +358,15 @@ SHARED_RANGES = {
         (0xFF0E, 0xFF0E),  # Fullwidth period
         (0xFF1A, 0xFF1B),  # Fullwidth colon and semicolon
         (0xFF1F, 0xFF1F),  # Fullwidth question mark
+        (0xFF08, 0xFF09),  # Fullwidth ( )
+        (0xFF3B, 0xFF3D),  # Fullwidth [ ]
+        (0xFF5B, 0xFF5D),  # Fullwidth { }
+        (0xFF1C, 0xFF1C),  # Fullwidth <
+        (0xFF1E, 0xFF1E),  # Fullwidth >
     ],
     "symbols": [
-        (0x0022, 0x002B),  # " # $ % & ' ( ) * + (symbols)
+        (0x0023, 0x0026),  # # $ % &
+        (0x002A, 0x002B),  # * +
         (0x002D, 0x002D),  # - (minus)
         (0x002F, 0x002F),  # / (slash)
         (0x003C, 0x003E),  # < = > (comparison operators)

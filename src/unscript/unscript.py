@@ -3,7 +3,13 @@ import unicodedata
 import re
 
 # Import script ranges from the shared module
-from unscript.script_ranges import SCRIPT_CORE_RANGES, SHARED_RANGES
+from unscript.script_ranges import (
+    SCRIPT_CORE_RANGES,
+    SHARED_RANGES,
+    PUNCTUATION_ASCII,
+    PUNCTUATION_EXTENDED,
+    PUNCTUATION_ALL,
+)
 
 DEFAULT_CONFIG = {
     "spaces": True,
@@ -59,9 +65,32 @@ def clean_script(script, text, config=None):
     # Add spaces based on config
     if current_config.get("spaces", True):
         ranges_to_use.extend(SHARED_RANGES["spaces"])
-    # Add other shared ranges based on config
+
+    # Handle punctuation levels (boolean or string)
+    punct_cfg = current_config.get("punctuation", False)
+    active_punct_ranges = []
+    if isinstance(punct_cfg, str):
+        level = punct_cfg.lower()
+        if level == "ascii":
+            active_punct_ranges = list(PUNCTUATION_ASCII)
+        elif level == "extended":
+            active_punct_ranges = list(PUNCTUATION_EXTENDED)
+        elif level == "all":
+            active_punct_ranges = list(PUNCTUATION_ALL)
+        # Unknown string -> keep active empty (no punctuation)
+    elif punct_cfg:
+        # Backward-compatible mapping: True -> ASCII level
+        active_punct_ranges = list(PUNCTUATION_ASCII)
+
+    # Include active punctuation ranges in the allowed set
+    if active_punct_ranges:
+        ranges_to_use.extend(active_punct_ranges)
+
+    # Add other shared ranges based on config (exclude punctuation handled above and spaces handled already)
     for category, include in current_config.items():
-        if include and category in SHARED_RANGES and category != "spaces":
+        if category in ("spaces", "punctuation"):
+            continue
+        if include and category in SHARED_RANGES:
             ranges_to_use.extend(SHARED_RANGES[category])
 
     # Process each character: keep included characters, replace excluded punctuation with spaces
@@ -96,21 +125,52 @@ def clean_script(script, text, config=None):
             # Use priority: punctuation > numbers > symbols (most specific first)
             category_priority = ["punctuation", "numbers", "symbols"]
 
+            matched_primary = False
             for category in category_priority:
                 if category in current_config:
                     include = current_config[category]
-                    if category in SHARED_RANGES:
-                        for start, end in SHARED_RANGES[category]:
+                    # Treat string punctuation levels as enabled for category checks
+                    if category == "punctuation" and isinstance(include, str):
+                        include_bool = True
+                    else:
+                        include_bool = bool(include)
+
+                    if category == "punctuation":
+                        # Detect punctuation using the shared superset first
+                        is_punct = False
+                        for start, end in SHARED_RANGES["punctuation"]:
                             if start <= code_point <= end:
-                                # Character found in this category
-                                if not include:
-                                    should_exclude = True
-                                # Stop checking other categories (found the primary category)
+                                is_punct = True
                                 break
-                        if (
-                            start <= code_point <= end
-                        ):  # If we found it in this category
-                            break
+                        if is_punct:
+                            # If punctuation is disabled entirely -> exclude
+                            if not include_bool:
+                                should_exclude = True
+                            else:
+                                # If enabled with a level, only allow if inside the active set
+                                if active_punct_ranges:
+                                    in_active = False
+                                    for s, e in active_punct_ranges:
+                                        if s <= code_point <= e:
+                                            in_active = True
+                                            break
+                                    if not in_active:
+                                        should_exclude = True
+                                else:
+                                    # include_bool True but no active ranges -> treat as disabled
+                                    should_exclude = True
+                            matched_primary = True
+                    else:
+                        if category in SHARED_RANGES:
+                            for start, end in SHARED_RANGES[category]:
+                                if start <= code_point <= end:
+                                    if not include_bool:
+                                        should_exclude = True
+                                    matched_primary = True
+                                    break
+                if matched_primary:
+                    # We matched a category; do not check lower-priority categories
+                    break
 
         if in_included_range and not should_exclude:
             result.append(char)

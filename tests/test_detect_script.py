@@ -127,6 +127,13 @@ class TestDetectScript(unittest.TestCase):
         actual_scripts = set(result.keys())
         self.assertEqual(actual_scripts, expected_scripts)
 
+    def test_detect_script_syloti_nagri(self):
+        """Test Syloti Nagri script detection (Sylo)."""
+        # Use a couple of Syloti Nagri characters: U+A80A, U+A803
+        text = "ꠊꠃ"
+        result = detect_script(text)
+        self.assertEqual(result, {"Sylo": 100.0})
+
 
 class TestDetectScriptDetailed(unittest.TestCase):
 

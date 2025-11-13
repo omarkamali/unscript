@@ -22,7 +22,7 @@ class TestCleanScript(unittest.TestCase):
 
         # Latin with punctuation (include punctuation)
         self.assertEqual(
-            clean_script("Latn", "Hello, World!", {"punctuation": True}),
+            clean_script("Latn", "Hello, World!", {"punctuation": "extended"}),
             "Hello, World!",
         )
 
@@ -42,7 +42,7 @@ class TestCleanScript(unittest.TestCase):
         self.assertEqual(clean_script("Latn", "Hëllö Wörld"), "Hëllö Wörld")
 
         # Full configuration
-        full_config = {"numbers": True, "punctuation": True, "symbols": True}
+        full_config = {"numbers": True, "punctuation": "extended", "symbols": True}
         self.assertEqual(
             clean_script("Latn", "Hello, World! $123.45", full_config),
             "Hello, World! $123.45",
@@ -67,7 +67,7 @@ class TestCleanScript(unittest.TestCase):
 
         # Arabic with punctuation
         self.assertEqual(
-            clean_script("Arab", "مرحبا، بالعالم!", {"punctuation": True}),
+            clean_script("Arab", "مرحبا، بالعالم!", {"punctuation": "extended"}),
             "مرحبا، بالعالم!",
         )
 
@@ -90,12 +90,60 @@ class TestCleanScript(unittest.TestCase):
 
         # Chinese with punctuation
         self.assertEqual(
-            clean_script("Hans", "你好，世界！", {"punctuation": True}), "你好，世界！"
+            clean_script("Hans", "你好，世界！", {"punctuation": "extended"}), "你好，世界！"
+        )
+
+    def test_punctuation_levels_ascii_mapping(self):
+        """Boolean punctuation=True maps to ASCII level and excludes brackets."""
+        # Latin
+        self.assertEqual(
+            clean_script("Latn", "Hello (World) [OK] {X} <Y>", {"punctuation": True}),
+            "Hello World OK X Y",
+        )
+        # Arabic with ASCII quotes preserved and Arabic comma excluded at ASCII level
+        s = 'قال: "هذا اختبار"، هل تُرى؟'
+        # ASCII keeps ASCII quotes and ASCII punctuation but not Arabic comma/question
+        self.assertEqual(
+            clean_script("Arab", s, {"punctuation": True}),
+            'قال: "هذا اختبار" هل تُرى',
+        )
+
+    def test_punctuation_levels_extended(self):
+        """Extended level includes brackets and script-specific marks."""
+        # Latin brackets retained under extended
+        self.assertEqual(
+            clean_script(
+                "Latn",
+                "Hello (World) [OK] {X} <Y>",
+                {"punctuation": "extended"},
+            ),
+            "Hello (World) [OK] {X} <Y>",
+        )
+        # Arabic script-specific punctuation retained under extended
+        self.assertEqual(
+            clean_script(
+                "Arab",
+                'قال: "هذا اختبار"، هل تُرى؟',
+                {"punctuation": "extended"},
+            ),
+            'قال: "هذا اختبار"، هل تُرى؟',
+        )
+
+    def test_punctuation_levels_all(self):
+        """All level includes extended plus general punctuation like em dash."""
+        # Em dash U+2014 kept under all
+        self.assertEqual(
+            clean_script(
+                "Latn",
+                "Alpha — Beta",
+                {"punctuation": "all"},
+            ),
+            "Alpha — Beta",
         )
 
         # CJK symbols and punctuation
         self.assertEqual(
-            clean_script("Hans", "你好。世界！", {"punctuation": True}), "你好。世界！"
+            clean_script("Hans", "你好。世界！", {"punctuation": "extended"}), "你好。世界！"
         )
 
     def test_japanese_script(self):
@@ -264,13 +312,13 @@ class TestCleanScript(unittest.TestCase):
 
         # Arabic punctuation
         self.assertEqual(
-            clean_script("Arab", "مرحبا، العالم؟", {"punctuation": True}),
+            clean_script("Arab", "مرحبا، العالم؟", {"punctuation": "extended"}),
             "مرحبا، العالم؟",
         )
 
         # CJK punctuation
         self.assertEqual(
-            clean_script("Hans", "你好，世界！", {"punctuation": True}), "你好，世界！"
+            clean_script("Hans", "你好，世界！", {"punctuation": "extended"}), "你好，世界！"
         )
 
     def test_symbols_configuration(self):
@@ -290,6 +338,20 @@ class TestCleanScript(unittest.TestCase):
         self.assertEqual(
             clean_script("Latn", "Email: user@domain.com", {"symbols": True}),
             "Email user@domain com",
+        )
+
+    def test_arabic_quotes_with_symbols_flag(self):
+        """Arabic quotes should be preserved with punctuation=True regardless of symbols flag."""
+        s = 'قال: "هذا اختبار"، هل تُرى؟'
+        # symbols=True keeps everything including quotes (extended to include Arabic punctuation)
+        self.assertEqual(
+            clean_script("Arab", s, {"numbers": True, "punctuation": "extended", "spaces": True, "symbols": True}),
+            s,
+        )
+        # symbols=False should still keep quotes as punctuation
+        self.assertEqual(
+            clean_script("Arab", s, {"numbers": True, "punctuation": "extended", "spaces": True, "symbols": False}),
+            s,
         )
 
     def test_edge_cases(self):
@@ -400,7 +462,7 @@ class TestCleanScript(unittest.TestCase):
 
         # Traditional Chinese with punctuation
         self.assertEqual(
-            clean_script("Hant", "你好，世界！", {"punctuation": True}), "你好，世界！"
+            clean_script("Hant", "你好，世界！", {"punctuation": "extended"}), "你好，世界！"
         )
 
     def test_number_systems_comprehensive(self):
@@ -483,21 +545,21 @@ class TestCleanScript(unittest.TestCase):
         """Test script-specific punctuation marks."""
         # Arabic punctuation
         self.assertEqual(
-            clean_script("Arab", "العربية، هذا؟ نعم!", {"punctuation": True}),
+            clean_script("Arab", "العربية، هذا؟ نعم!", {"punctuation": "extended"}),
             "العربية، هذا؟ نعم!",
         )
 
         # Devanagari punctuation (using danda)
         self.assertEqual(
-            clean_script("Deva", "हिन्दी। यह है॥", {"punctuation": True}), "हिन्दी। यह है॥"
+            clean_script("Deva", "हिन्दी। यह है॥", {"punctuation": "extended"}), "हिन्दी। यह है॥"
         )
 
         # CJK punctuation
         self.assertEqual(
-            clean_script("Hans", "中文。这是！", {"punctuation": True}), "中文。这是！"
+            clean_script("Hans", "中文。这是！", {"punctuation": "extended"}), "中文。这是！"
         )
         self.assertEqual(
-            clean_script("Jpan", "日本語。これは！", {"punctuation": True}),
+            clean_script("Jpan", "日本語。これは！", {"punctuation": "extended"}),
             "日本語。これは！",
         )
 
@@ -528,7 +590,7 @@ class TestCleanScript(unittest.TestCase):
 
     def test_mixed_configurations(self):
         """Test complex mixed configurations."""
-        full_config = {"numbers": True, "punctuation": True, "symbols": True}
+        full_config = {"numbers": True, "punctuation": "extended", "symbols": True}
 
         # Latin with everything
         self.assertEqual(
@@ -587,7 +649,7 @@ class TestCleanScript(unittest.TestCase):
                 )
 
                 # Test with punctuation enabled
-                result_with_punct = clean_script(script, text, {"punctuation": True})
+                result_with_punct = clean_script(script, text, {"punctuation": "extended"})
                 self.assertEqual(
                     result_with_punct,
                     expected_with_punct,

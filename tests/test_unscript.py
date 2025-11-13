@@ -53,7 +53,7 @@ class TestUnscript(unittest.TestCase):
     def test_unscript_with_arabic_config(self):
         """Test unscript function with Arabic script and configurations."""
         # Arabic with punctuation
-        result = unscript("Arab", "مرحبا، بالعالم! @user", {"punctuation": True})
+        result = unscript("Arab", "مرحبا، بالعالم! @user", {"punctuation": "extended"})
         self.assertEqual(result, "مرحبا، بالعالم!")
 
         # Arabic with Arabic numbers
@@ -139,7 +139,7 @@ class TestUnscript(unittest.TestCase):
         self.assertEqual(result, "你好")
 
         # Chinese with punctuation
-        result = unscript("Hans", "你好，世界! @user", {"punctuation": True})
+        result = unscript("Hans", "你好，世界! @user", {"punctuation": "extended"})
         self.assertEqual(result, "你好，世界!")
 
     def test_unscript_invalid_script(self):
