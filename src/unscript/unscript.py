@@ -16,6 +16,8 @@ DEFAULT_CONFIG = {
     "numbers": False,
     "punctuation": False,
     "symbols": False,
+    "max_foreign_words": 0,
+    "foreign_scripts": None,
 }
 
 def clean_script(script, text, config=None):
@@ -23,7 +25,7 @@ def clean_script(script, text, config=None):
     Remove any characters that don't belong to the specified script.
 
     Args:
-        script (str): The script code (e.g., 'Latn', 'Arab')
+        script (str | list | tuple | set): One or more script codes (e.g., 'Latn', 'Arab')
         text (str): The text to clean
         config (dict): Configuration overriding DEFAULT_CONFIG
 
@@ -33,8 +35,17 @@ def clean_script(script, text, config=None):
     if not text:
         return text
 
-    # If script is not in our dictionary, return the original text
-    if script not in SCRIPT_CORE_RANGES:
+    # Normalize scripts argument to a list of valid script codes
+    if isinstance(script, str):
+        primary_scripts = [script]
+    else:
+        try:
+            primary_scripts = list(script)
+        except TypeError:
+            primary_scripts = [str(script)]
+
+    primary_scripts = [s for s in primary_scripts if s in SCRIPT_CORE_RANGES]
+    if not primary_scripts:
         return text
 
     # Merge configs
@@ -61,7 +72,9 @@ def clean_script(script, text, config=None):
         placeholders = {}
 
     # Build ranges to use (non-cached)
-    ranges_to_use = list(SCRIPT_CORE_RANGES[script])
+    ranges_to_use = []
+    for s in primary_scripts:
+        ranges_to_use.extend(SCRIPT_CORE_RANGES[s])
     # Add spaces based on config
     if current_config.get("spaces", True):
         ranges_to_use.extend(SHARED_RANGES["spaces"])
@@ -93,9 +106,52 @@ def clean_script(script, text, config=None):
         if include and category in SHARED_RANGES:
             ranges_to_use.extend(SHARED_RANGES[category])
 
+    # Precompute up to N other-script token spans on protected_text
+    allow_n = int(current_config.get("max_foreign_words", 0) or 0)
+    allowed_whitelist = current_config.get("foreign_scripts", None)
+    if isinstance(allowed_whitelist, str):
+        allowed_whitelist = [allowed_whitelist]
+    if allowed_whitelist is not None:
+        allowed_whitelist = [s for s in allowed_whitelist if s in SCRIPT_CORE_RANGES]
+
+    other_token_spans = []
+    if allow_n > 0:
+        def token_dominant_script(tok: str):
+            counts = {}
+            for ch in tok:
+                cp = ord(ch)
+                for sc in SCRIPT_CORE_RANGES:
+                    for a, b in SCRIPT_CORE_RANGES[sc]:
+                        if a <= cp <= b:
+                            counts[sc] = counts.get(sc, 0) + 1
+                            break
+                    else:
+                        continue
+                    break
+            if not counts:
+                return None
+            return max(counts.items(), key=lambda x: x[1])[0]
+
+        taken = 0
+        for m in re.finditer(r"\S+", protected_text):
+            if taken >= allow_n:
+                break
+            tok = m.group(0)
+            dom = token_dominant_script(tok)
+            if dom is None:
+                continue
+            if dom in primary_scripts:
+                continue
+            if allowed_whitelist is not None and dom not in allowed_whitelist:
+                continue
+            other_token_spans.append((m.start(), m.end(), dom))
+            taken += 1
+
     # Process each character: keep included characters, replace excluded punctuation with spaces
     result = []
     i = 0
+    span_idx = 0
+    current_span = other_token_spans[span_idx] if other_token_spans else None
     while i < len(protected_text):
         # Check if we're at a placeholder
         if protected_text[i:].startswith("__DECIMAL_"):
@@ -111,11 +167,24 @@ def clean_script(script, text, config=None):
         code_point = ord(char)
         in_included_range = False
 
+        # Advance current span pointer if needed
+        if current_span is not None and i >= current_span[1]:
+            span_idx += 1
+            current_span = other_token_spans[span_idx] if span_idx < len(other_token_spans) else None
+
         # Check if character is in included ranges
         for start, end in ranges_to_use:
             if start <= code_point <= end:
                 in_included_range = True
                 break
+
+        # If not included, but inside an allowed other-script token, allow letters from that token's dominant script
+        if not in_included_range and current_span is not None and current_span[0] <= i < current_span[1]:
+            dom_script = current_span[2]
+            for start, end in SCRIPT_CORE_RANGES[dom_script]:
+                if start <= code_point <= end:
+                    in_included_range = True
+                    break
 
         # Even if character is in included ranges, check if it should be excluded
         # due to configuration (e.g., numbers=False should exclude digits even if in script range)

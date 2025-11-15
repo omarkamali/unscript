@@ -33,6 +33,15 @@ print(clean_result)  # Output: "hello ! check مرحبا $123.45"
 script_result = clean_script("Latn", text, {"numbers": True, "symbols": True})
 print(script_result)  # Output: "Hello @user Check https //example com 😊 $123.45"
 
+# Multiple scripts: keep Latin OR Arabic
+multi = clean_script(["Latn", "Arab"], "Hello مرحبا 你好")
+print(multi)  # Output: "Hello مرحبا"
+
+# Allow up to N words from other scripts (optionally restricted)
+mix_cfg = {"max_foreign_words": 1, "foreign_scripts": ["Arab"]}
+kept = clean_script("Latn", "Hello مرحبا 你好", mix_cfg)
+print(kept)  # Output: "Hello مرحبا"
+
 # For detecting script composition
 detect_result = detect_script(text)
 print(detect_result)  # Output: {'Latn': 71.43, 'Arab': 28.57}
@@ -132,23 +141,26 @@ print(cleaned_text3)
 # Expected output: "Hello WORLD"
 ```
 
-### `clean_script(script: str, text: str, config: dict = None) -> str`
+### `clean_script(script: str | Iterable[str], text: str, config: dict = None) -> str`
 
 This function filters text to include only characters belonging to a specified Unicode script, with configurable options for numbers, punctuation, and symbols. It's ideal for tasks requiring strict script adherence.
 
 **Arguments:**
--   `script` (`str`): The Unicode script code (e.g., `'Latn'`, `'Arab'`, `'Hans'`).
+-   `script` (`str | Iterable[str]`): One or many Unicode script codes (e.g., `'Latn'`, `'Arab'`, `'Hans'`). When multiple are provided, ranges are unioned.
 -   `text` (`str`): The text string to be cleaned.
--   `config` (`dict`, optional): A dictionary to customize character inclusion. Defaults to `{'spaces': True, 'numbers': False, 'punctuation': False, 'symbols': False}`.
+-   `config` (`dict`, optional): Customize inclusion. Defaults to `{'spaces': True, 'numbers': False, 'punctuation': False, 'symbols': False, 'max_foreign_words': 0, 'foreign_scripts': None}`.
     -   `'spaces'` (`bool`): Include common whitespace characters (default: `True`).
     -   `'numbers'` (`bool`): Include digits (e.g., '0-9', Arabic, Devanagari digits) (default: `False`).
-    -   `'punctuation'` (`bool`): Include common and script-specific punctuation marks (default: `False`).
+    -   `'punctuation'` (`bool | {'ascii'|'extended'|'all'}`): Include punctuation; boolean maps to `'ascii'` (default: `False`).
     -   `'symbols'` (`bool`): Include various symbols (e.g., currency, mathematical) (default: `False`).
+    -   `'max_foreign_words'` (`int`): Allow up to N tokens whose dominant script is not in `script` (default: `0`).
+    -   `'foreign_scripts'` (`list[str] | str | None`): Optional whitelist restricting which non-primary scripts can be used for those N tokens (default: `None`, meaning any).
 
 **Behavior:**
 -   Characters not belonging to the specified `script` or excluded by the `config` are replaced with spaces.
 -   Multiple spaces are collapsed into a single space.
 -   **Priority for overlapping ranges**: If a character falls into multiple categories, the more specific one takes precedence (`punctuation` > `numbers` > `symbols`). This ensures correct filtering.
+ -   When `max_foreign_words > 0`, up to N non-primary tokens are preserved if their dominant script is either in `foreign_scripts` (when provided) or any other script.
 
 **Example Usage:**
 
@@ -172,6 +184,18 @@ text_chinese = "你好。世界！This is a test."
 cleaned_chinese = clean_script("Hans", text_chinese, {"punctuation": True})
 print(cleaned_chinese)
 # Expected output: "你好。世界！"
+
+# Example 5: Multiple scripts OR logic
+text_multi = "Hello مرحبا 你好"
+print(clean_script(["Latn", "Arab"], text_multi))
+# Expected output: "Hello مرحبا"
+
+# Example 6: Allow N words from other scripts
+text_mix = "Hello مرحبا 你好 test"
+print(clean_script("Latn", text_mix, {"max_foreign_words": 2}))
+# Expected output: "Hello مرحبا 你好 test"
+print(clean_script("Latn", text_mix, {"max_foreign_words": 1, "foreign_scripts": "Arab"}))
+# Expected output: "Hello مرحبا test"
 
 # Example 4: Devanagari script, with punctuation
 text_devanagari = "नमस्ते। यह है॥ 987"
@@ -656,7 +680,7 @@ If you use Unscript in your research, please cite it as follows:
   title={Unscript: Multilingual Text Cleaning},
   author={Omar Kamali},
   year={2025},
-  version={0.1.1},
+  version={0.1.3},
   doi={10.5281/zenodo.17479243},
   url={https://github.com/omarkamali/unscript},
   note={Project developed under Omneity Labs}

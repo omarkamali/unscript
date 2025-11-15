@@ -656,6 +656,174 @@ class TestCleanScript(unittest.TestCase):
                     f"Failed for {script} with punctuation",
                 )
 
+    def test_multiple_primary_scripts(self):
+        """Test that multiple primary scripts are supported and unioned."""
+        text = "Hello مرحبا 你好"
+        # List input
+        self.assertEqual(clean_script(["Latn", "Arab"], text), "Hello مرحبا")
+        # Tuple input
+        self.assertEqual(clean_script(("Latn", "Arab"), text), "Hello مرحبا")
+        # Set input (order shouldn't matter)
+        self.assertEqual(clean_script({"Arab", "Latn"}, text), "Hello مرحبا")
+        # Include punctuation passthrough
+        self.assertEqual(
+            clean_script(["Latn", "Arab"], "Hello، مرحبا! 你好", {"punctuation": "extended"}),
+            "Hello، مرحبا!",
+        )
+
+    def test_max_foreign_words(self):
+        """Test allowing up to N tokens from other scripts, optionally whitelisted."""
+        text = "Hello مرحبا 你好 test"
+        # Default (N=0) should not keep other scripts
+        self.assertEqual(clean_script("Latn", text), "Hello test")
+
+        # Allow 2 tokens from any other script
+        self.assertEqual(
+            clean_script("Latn", text, {"max_foreign_words": 2}),
+            "Hello مرحبا 你好 test",
+        )
+
+        # Allow only Arabic as other script, N=1
+        self.assertEqual(
+            clean_script("Latn", text, {"max_foreign_words": 1, "foreign_scripts": ["Arab"]}),
+            "Hello مرحبا test",
+        )
+
+        # Allow only Hans as other script, N=1 (string shorthand)
+        self.assertEqual(
+            clean_script("Latn", text, {"max_foreign_words": 1, "foreign_scripts": "Hans"}),
+            "Hello 你好 test",
+        )
+
+    def test_invalid_and_duplicate_scripts(self):
+        """Invalid script codes ignored; duplicates have no effect; generators accepted."""
+        self.assertEqual(
+            clean_script(["Latn", "Bogus", "Latn"], "Hello مرحبا"),
+            "Hello",
+        )
+        self.assertEqual(
+            clean_script((s for s in ["Arab", "Latn"]), "Hello مرحبا"),
+            "Hello مرحبا",
+        )
+
+    def test_other_words_token_boundaries_with_punctuation(self):
+        text = "Hello, مرحبا! 你好?"
+        # punctuation disabled -> commas/exclamations/question removed
+        self.assertEqual(
+            clean_script("Latn", text, {"max_foreign_words": 2}),
+            "Hello مرحبا 你好",
+        )
+        # punctuation extended -> all kept
+        self.assertEqual(
+            clean_script(
+                "Latn",
+                text,
+                {"max_foreign_words": 2, "punctuation": "extended"},
+            ),
+            "Hello, مرحبا! 你好?",
+        )
+
+    def test_max_foreign_words_semantics(self):
+        text = "Hello مرحبا 你好"
+        # N larger than available -> keep all available
+        self.assertEqual(
+            clean_script("Latn", text, {"max_foreign_words": 5}),
+            "Hello مرحبا 你好",
+        )
+        # N = 0 explicitly
+        self.assertEqual(
+            clean_script("Latn", text, {"max_foreign_words": 0}),
+            "Hello",
+        )
+        # Negative treated as 0
+        self.assertEqual(
+            clean_script("Latn", text, {"max_foreign_words": -2}),
+            "Hello",
+        )
+        # Empty whitelist blocks others
+        self.assertEqual(
+            clean_script(
+                "Latn", text, {"max_foreign_words": 2, "foreign_scripts": []}
+            ),
+            "Hello",
+        )
+
+    def test_inside_allowed_tokens_respects_config(self):
+        # Numbers within allowed other-script token
+        self.assertEqual(
+            clean_script(
+                "Latn",
+                "Hello مرحبا١٢٣",
+                {"max_foreign_words": 1, "numbers": False},
+            ),
+            "Hello مرحبا",
+        )
+        self.assertEqual(
+            clean_script(
+                "Latn",
+                "Hello مرحبا١٢٣",
+                {"max_foreign_words": 1, "numbers": True},
+            ),
+            "Hello مرحبا١٢٣",
+        )
+        # Arabic comma within allowed token: ascii vs extended
+        arabic_with_comma = "Hello مرحبا،"
+        self.assertEqual(
+            clean_script(
+                "Latn",
+                arabic_with_comma,
+                {"max_foreign_words": 1, "punctuation": "ascii"},
+            ),
+            "Hello مرحبا",
+        )
+        self.assertEqual(
+            clean_script(
+                "Latn",
+                arabic_with_comma,
+                {"max_foreign_words": 1, "punctuation": "extended"},
+            ),
+            "Hello مرحبا،",
+        )
+
+    def test_allowed_scripts_validation(self):
+        text = "Hello مرحبا 你好"
+        # Only Hans allowed in whitelist (invalid codes ignored)
+        self.assertEqual(
+            clean_script(
+                "Latn",
+                text,
+                {"max_foreign_words": 2, "foreign_scripts": ["Bogus", "Hans"]},
+            ),
+            "Hello 你好",
+        )
+
+    def test_decimal_placeholder_with_allowed_tokens(self):
+        text = "Hello 你好 123.45 مرحبا"
+        self.assertEqual(
+            clean_script(
+                "Latn", text, {"numbers": True, "max_foreign_words": 1}
+            ),
+            "Hello 你好 123.45",
+        )
+
+    def test_spaces_false_with_allowed_tokens(self):
+        text = "Hello مرحبا 你好"
+        # No spaces preserved, allowed token concatenates with primary
+        self.assertEqual(
+            clean_script(
+                "Latn", text, {"spaces": False, "max_foreign_words": 1}
+            ),
+            "Helloمرحبا",
+        )
+
+    def test_left_to_right_selection(self):
+        text = "مرحبا 你好 مرحبا"
+        # Keep first two other-script tokens
+        self.assertEqual(
+            clean_script("Latn", text, {"max_foreign_words": 2}),
+            "مرحبا 你好",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

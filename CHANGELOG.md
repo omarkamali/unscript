@@ -1,3 +1,13 @@
+## [0.1.3] - 2025-11-15
+
+### Added
+- `clean_script` now accepts multiple scripts (`str | Iterable[str]`) and unions ranges.
+- New config options in `clean_script`:
+  - `max_foreign_words`: allow up to N tokens from non-primary scripts.
+  - `foreign_scripts`: optional whitelist restricting which other scripts can be allowed.
+- Tests covering multiple primary scripts and the new options.
+
+
 ## [0.1.2] - 2025-11-11
 
 ### Added
